@@ -11,7 +11,7 @@ def calculate_carbon_footprint(diameter, length, color, mix, cap_type, cap_color
     mix_data = {
         "STANDARD": (50, 0, 50, 0), "SOFT": (0, 70, 30, 0), "HARD": (0, 30, 70, 0),
         "PCR 30%": (70, 0, 0, 30), "PCR 50%": (50, 0, 0, 50), "PCR 70%": (30, 0, 0, 70),
-        "Sugarcane": (50, 0, 50, 0)
+        "Sugarcane": (50, 0, 50, 0)  # 50% LDPE Sugarcane + 50% HDPE
     }
     cap_data = {
         "50 Flip Top": 0.06256, "50 Standard screw-on": 0.04692, "40 Flip Top": 0.04692, "40 Standard screw-on": 0.03128,
@@ -24,15 +24,24 @@ def calculate_carbon_footprint(diameter, length, color, mix, cap_type, cap_color
     print_emission = {"Sitodruk": 0.010, "Fleksografia": 0.007, "Offset": 0.012}
 
     co2_ldpe = 1.9
+    co2_ldpe_sugarcane = -2.12
     co2_ll_dpe = 2.0
     co2_hdpe = 1.9
     co2_pcr = 1.0
-    co2_ldpe_sugarcane = -2.12
 
     base_mass = mass_data.get(diameter, 0)
     adjusted_mass = base_mass * (length / base_length)
     head_mass = head_mass_data.get(diameter, 0)
     mix_values = mix_data.get(mix, (0, 0, 0, 0))
+
+    if mix == "Sugarcane":
+        sled_weglowy_korpusu = ((mix_values[0] * co2_ldpe_sugarcane + mix_values[2] * co2_hdpe) / 100) * adjusted_mass
+    else:
+        sled_weglowy_korpusu = ((mix_values[0] * co2_ldpe + mix_values[1] * co2_ll_dpe +
+                                  mix_values[2] * co2_hdpe + mix_values[3] * co2_pcr) / 100) * adjusted_mass
+
+    sled_weglowy_glowki = head_mass * co2_hdpe
+    head_color_co2 = head_color_impact.get(head_color, 0)
     cap_emission = cap_data.get(cap_type, 0) + cap_color_impact.get(cap_color, 0)
 
     print_emission_total = (
@@ -40,17 +49,6 @@ def calculate_carbon_footprint(diameter, length, color, mix, cap_type, cap_color
         flexo_colors * print_emission["Fleksografia"] +
         offset_colors * print_emission["Offset"]
     )
-
-    if mix == "Sugarcane":
-        sled_weglowy_korpusu = ((mix_values[0] * co2_hdpe + mix_values[1] * co2_ll_dpe +
-                                  mix_values[2] * co2_hdpe + mix_values[3] * co2_pcr +
-                                  mix_values[1] * co2_ldpe_sugarcane) / 100) * adjusted_mass
-    else:
-        sled_weglowy_korpusu = ((mix_values[0] * co2_ldpe + mix_values[1] * co2_ll_dpe +
-                                  mix_values[2] * co2_hdpe + mix_values[3] * co2_pcr) / 100) * adjusted_mass
-
-    sled_weglowy_glowki = head_mass * co2_hdpe
-    head_color_co2 = head_color_impact.get(head_color, 0)
 
     total_emission = (
         sled_weglowy_korpusu + sled_weglowy_glowki + cap_emission +
